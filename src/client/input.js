@@ -56,17 +56,21 @@ function getUpdatesFromInputDevices() {
     updateDirection(keysState.dir);
   }
   
-  if ((keysState.keys && keysState.keys[38]) || 
-    (keysState.keys && keysState.keys[0])) {moveRobot(keysState.dir, 1); }
+  if ((keysState.keys && keysState.keys[38]) || (keysState.keys && keysState.keys[0])) {
+    moveRobot(keysState.dir, 1);
+    console.log("38 moving forward ", keysState.dir);
+   }
 
-  if ((keysState.keys && keysState.keys[40]) ||
-    (keysState.keys && keysState.keys[2])) {moveRobot(keysState.dir, -1); }  
+  if ((keysState.keys && keysState.keys[40]) || (keysState.keys && keysState.keys[2])) {
+    moveRobot(keysState.dir, -1); 
+    console.log("40 moving backward ", keysState.dir);
+  }  
 }
 
 
 export function startCapturingInput() {  
 
-  keysState.interval = setInterval(getUpdatesFromInputDevices, 20);
+  keysState.interval = setInterval(getUpdatesFromInputDevices, 100);
   keysState.dir = 0;
 
   // window.addEventListener('mousedown mouseup', onMouseDown);
