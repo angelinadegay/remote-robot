@@ -1,0 +1,11 @@
+steps:
+- name: 'gcr.io/cloud-builders/git'
+  args: ['clone', 'https://github.com/odegay/rr-raspberryprocessor.git']
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args: ['gsutil', 'cp', './src/client/robotprocessor.py', 'gs://remote-robot/robotprocessor.py']
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  args: ['gsutil', 'acl', 'ch', '-u', 'AllUsers:R', 'gs://remote-robot/robotprocessor.py']  
+
+#steps:
+#- name: 'gcr.io/cloud-builders/wget'
+#  args: ['-O', 'localfile.zip', 'http://www.example.com/remotefile.zip']
