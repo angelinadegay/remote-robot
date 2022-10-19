@@ -6,6 +6,7 @@ const socketio = require('socket.io');
 const Constants = require('../shared/constants');
 const Game = require('./game');
 const webpackConfig = require('../../webpack.dev.js');
+//const robots = require('./robotsrouter.js');
 
 // Setup an Express server
 const app = express();
@@ -32,9 +33,11 @@ const io = socketio(server);
 io.on('connection', socket => {
   console.log('Player connected!', socket.id);
 
-  socket.on(Constants.MSG_TYPES.JOIN_GAME, joinGame);
+  socket.on(Constants.MSG_TYPES.JOIN_DRIVER, joinDriver);
+  socket.on(Constants.MSG_TYPES.JOIN_ROBOT, joinRobot);
   socket.on(Constants.MSG_TYPES.INPUT, handleInput);
   socket.on(Constants.MSG_TYPES.MOVE, handleMove);
+  socket.on(Constants.MSG_TYPES.ROTATE, handleInput);
   socket.on(Constants.MSG_TYPES.ROTATE, handleInput);
   socket.on('disconnect', onDisconnect);
 });
@@ -42,11 +45,34 @@ io.on('connection', socket => {
 // Setup the Game
 const game = new Game();
 
-function joinGame(username) {
+//app.use('/rest', robots);
+app.post("/rest/registerrobot/:address", (req, res) => {
+  console.log('Registration call received. Params = ', req.params);
+  if(!req.params.address)
+    {    
+      res.status(400);
+      res.json({message: "Bad Request: Parameter address not found"});
+      console.log('Bad Request: Parameter address not found');
+    } else {
+      game.setRobotAdress(req.params.address)
+      console.log('Address received: ', req.params.address);
+      res.status(201);
+      res.json({message: "A new robot URL assigned"});      
+    }
+ });
+
+function joinDriver(username) {
+  console.log('username:', username);
   game.addPlayer(this, username);
 }
 
+function joinRobot(username) {
+  console.log('username:', username);
+  game.addRobot(this, username);
+}
+
 function handleInput(dir) {
+  console.log('handleImput call, direction = ', dir);
   game.handleInput(this, dir);
 }
 

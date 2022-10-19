@@ -1,19 +1,31 @@
 const Constants = require('../shared/constants');
 const Player = require('./player');
 const applyCollisions = require('./collisions');
+const io = require ('socket.io-client');
 
 class Game {
   constructor() {
-    this.sockets = {};
+    this.playerSockets = {};
+    this.robotSockets = {};
     this.players = {};
+    this.robots = {};
     this.bullets = [];
+    this.raspberryAddress = "";
     this.lastUpdateTime = Date.now();
     this.shouldSendUpdate = false;
+    this.socket = io("ws://localhost:8765");
     setInterval(this.update.bind(this), 1000 / 60);
   }
 
+  setRobotAdress(robotAdress) {
+    if (robotAdress.length > 1) 
+      this.raspberryAddress = robotAdress;
+    else
+      console.log('EMPTY ROBOT ADDRESSS!');
+  }
+
   addPlayer(socket, username) {
-    this.sockets[socket.id] = socket;
+    this.playerSockets[socket.id] = socket;
 
     // Generate a position to start this player at.
     const x = Constants.MAP_SIZE / 2;
@@ -21,22 +33,61 @@ class Game {
     this.players[socket.id] = new Player(socket.id, username, x, y);
   }
 
+  addRobot(socket, username) {
+    this.robotSockets = {};
+    this.robots = {};
+    this.robotSockets[socket.id] = socket;
+
+    // Generate a position to start this player at.
+    const x = Constants.MAP_SIZE / 2;
+    const y = Constants.MAP_SIZE / 2;
+    this.robots[socket.id] = new Player(socket.id, username, x, y);
+  }
+
   removePlayer(socket) {
-    delete this.sockets[socket.id];
+    delete this.playerSockets[socket.id];
     delete this.players[socket.id];
   }
 
   //OLEG
-  handleMove(socket, dir, backforth) {
+  handleMove(socket, dir, backforth) { 
+    var dirstr = '';   
       if (this.players[socket.id]) {
         this.players[socket.id].setDirection(dir);
         this.players[socket.id].movement(backforth);
+        console.log('emmitting the MOVE');
+        Object.keys(this.robotSockets).forEach(playerID => {
+          const robotSocket = this.robotSockets[playerID];
+          const robot = this.robots[playerID];
+          
+          if (backforth > 0 )
+            dirstr = Constants.ARDUINO_MOVEMENT_DIRECTIONS.FORWARD;
+          else if (backforth < 0)
+            dirstr = Constants.ARDUINO_MOVEMENT_DIRECTIONS.BACKWARD;
+  
+          robotSocket.emit('robot_move', dirstr);
+          console.log('sent to ', playerID);
+        });         
       }
     }
 
   handleInput(socket, dir) {
+    var dirstr = '';
     if (this.players[socket.id]) {
       this.players[socket.id].setDirection(dir);
+      console.log('emmitting the TURN');
+      Object.keys(this.robotSockets).forEach(playerID => {
+        const robotSocket = this.robotSockets[playerID];
+        const robot = this.robots[playerID];
+        
+        if (dir > 0 && dir < Math.PI)
+          dirstr = Constants.ARDUINO_MOVEMENT_DIRECTIONS.RIGHT;
+        else if (dir > -Math.PI && dir < 0)
+          dirstr = Constants.ARDUINO_MOVEMENT_DIRECTIONS.LEFT;
+
+        robotSocket.emit('robot_move', dirstr);
+        console.log('sent to ', playerID);
+      });      
     }
   }
 
@@ -58,13 +109,13 @@ class Game {
     // this.bullets = this.bullets.filter(bullet => !bulletsToRemove.includes(bullet));
 
     // Update each player
-    Object.keys(this.sockets).forEach(playerID => {
-      const player = this.players[playerID];
+//    Object.keys(this.sockets).forEach(playerID => {
+  //    const player = this.players[playerID];
       // player.update(dt);
       // if (newBullet) {
       //   this.bullets.push(newBullet);
       // }
-    });
+    //});
 
     // Apply collisions, give players score for hitting bullets
     // const destroyedBullets = applyCollisions(Object.values(this.players), this.bullets);
@@ -88,8 +139,8 @@ class Game {
     // Send a game update to each player every other time
     if (this.shouldSendUpdate) {
       const leaderboard = this.getLeaderboard();
-      Object.keys(this.sockets).forEach(playerID => {
-        const socket = this.sockets[playerID];
+      Object.keys(this.playerSockets).forEach(playerID => {
+        const socket = this.playerSockets[playerID];
         const player = this.players[playerID];
         socket.emit(Constants.MSG_TYPES.GAME_UPDATE, this.createUpdate(player, leaderboard));
       });
